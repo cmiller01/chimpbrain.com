@@ -1,0 +1,102 @@
+---
+title: Shipping Horses
+author: Christian
+date: '2017-05-26'
+slug: shipping-horses
+categories: []
+tags:
+  - R
+  - Horse Racing
+---
+
+
+
+<div id="shipping-horsesor-where-is-zol-zayne-going" class="section level1">
+<h1>Shipping Horses…or where is Zol Zayne going?</h1>
+<p><em>See code <a href="https://github.com/cmiller01/chimpbrain.com/blob/master/content/post/2017-05-26-shipping-horses.Rmd">here</a></em></p>
+<div id="background" class="section level2">
+<h2>Background</h2>
+<p>Horses get shipped from around the country and globe to compete for money and prestige (big races –&gt; big breeding money…more on that some other time).</p>
+<p>Not all horses get “shipped”, some horses stay at their home tracks while others might only race once at a given track then travel a few thousand miles to their home base for training then travel again for their next race.</p>
+<p>I wanted to examine some of this shipping behavior and especially to understand if there are patterns to how horses ship around the US.</p>
+<p>A while ago I purchased some data from the Daily Racing Form on results from horse races in 2015.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> It’s a super-fun dataset which I plan on referencing often, for now I’m only going to look at a small piece, the “shipping” AKA where does American Pharoah go next?<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a></p>
+<div id="quick-data-description" class="section level3">
+<h3>Quick data description</h3>
+<pre><code>## Observations: 329,943
+## Variables: 6
+## $ race_date       &lt;date&gt; 2015-01-01, 2015-01-01, 2015-01-01, 2015-01-0...
+## $ race_track      &lt;chr&gt; &quot;AQU&quot;, &quot;AQU&quot;, &quot;AQU&quot;, &quot;AQU&quot;, &quot;AQU&quot;, &quot;AQU&quot;, &quot;AQU...
+## $ race_type       &lt;chr&gt; &quot;MCL&quot;, &quot;MCL&quot;, &quot;MCL&quot;, &quot;MCL&quot;, &quot;MCL&quot;, &quot;MCL&quot;, &quot;MCL...
+## $ surface         &lt;chr&gt; &quot;D&quot;, &quot;D&quot;, &quot;D&quot;, &quot;D&quot;, &quot;D&quot;, &quot;D&quot;, &quot;D&quot;, &quot;D&quot;, &quot;D&quot;, &quot;...
+## $ horse_name      &lt;chr&gt; &quot;Coral Beach&quot;, &quot;Nejma&quot;, &quot;Your Turn&quot;, &quot;Gabby&#39;s ...
+## $ original_finish &lt;int&gt; 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0...</code></pre>
+<p>Each observation equates to a horse who started in a race in 2015. In this dataset there are over 300,000 starts represented. <a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a></p>
+<ul>
+<li><code>race_date</code> = date of race, there’s 338 records here, 93% of days in 2015 had a race!</li>
+<li><code>race_track</code> = unique code for race track, over 120 in this dataset</li>
+<li><code>race_type</code> = different “levels” for horses to race, from Claim (CLM/MCL) to Stakes (STK) like the Kentucky Derby</li>
+<li><code>surface</code> = What surface the race was run on, D = dirt, T = turf aka grass</li>
+<li><code>horse_name</code> = The name of the horse! Over 50K present here</li>
+<li><code>original_finish</code> = Order the horse finished in, 0 = did not finish, 1 = WON!</li>
+</ul>
+</div>
+</div>
+<div id="who-shipped-to-the-most-tracks" class="section level2">
+<h2>Who shipped to the most tracks?</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Horse name</th>
+<th align="right">Number of Different Tracks</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Zol Zayne</td>
+<td align="right">11</td>
+</tr>
+<tr class="even">
+<td align="left">Rise Up</td>
+<td align="right">10</td>
+</tr>
+<tr class="odd">
+<td align="left">Sideways Vision</td>
+<td align="right">10</td>
+</tr>
+<tr class="even">
+<td align="left">Tafawuk</td>
+<td align="right">10</td>
+</tr>
+</tbody>
+</table>
+<p>Zol Zayne shipped to 11 different tracks in less than a year. For comparison American Pharoah was at 7 different tracks throughout the year. Both of them are way above normal compared to other horses, with the median for the year being just 2 different tracks.</p>
+<div id="horses-on-the-move" class="section level3">
+<h3>Horses on the move</h3>
+<p>Let’s look at some of the horses who “shipped” the most throughout 2015…</p>
+<p><img src="/post/2017-05-26-shipping-horses_files/figure-html/track_maps-1.png" width="672" /></p>
+<p>Interesting! Although these horses shipped a lot of times they mostly stayed in the same region…I wonder what this would look like for all tracks?</p>
+<p><img src="/post/2017-05-26-shipping-horses_files/figure-html/all_track_map-1.png" width="672" /> Seems like distance/region is a strong part of the equation in determining where horses ship. Also, this view really doesn’t seem right. This map is interesting but a network diagram might be a better fit. I’ll leave that for next time…</p>
+</div>
+</div>
+<div id="thanks" class="section level2">
+<h2>Thanks!</h2>
+<p>Always helpful to have some examples, these were all useful to me:</p>
+<ul>
+<li><a href="https://flowingdata.com/2011/05/11/how-to-map-connections-with-great-circles/" class="uri">https://flowingdata.com/2011/05/11/how-to-map-connections-with-great-circles/</a></li>
+<li><a href="https://gis.stackexchange.com/questions/122494/how-to-prevent-cross-world-lines-in-ggplot-world-map" class="uri">https://gis.stackexchange.com/questions/122494/how-to-prevent-cross-world-lines-in-ggplot-world-map</a></li>
+<li><a href="http://zevross.com/blog/2014/07/16/mapping-in-r-using-the-ggplot2-package/" class="uri">http://zevross.com/blog/2014/07/16/mapping-in-r-using-the-ggplot2-package/</a></li>
+</ul>
+</div>
+<div id="todo" class="section level2">
+<h2>TODO:</h2>
+<p>Show network maps using adjacency matrix: see e.g.: * <a href="http://kateto.net/networks-r-igraph" class="uri">http://kateto.net/networks-r-igraph</a> * <a href="http://www.mjdenny.com/Preparing_Network_Data_In_R.html" class="uri">http://www.mjdenny.com/Preparing_Network_Data_In_R.html</a></p>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Example charts and field descriptors here: <a href="https://store.drf.com/stores/1/Text_Charts_-_Annual_P19766C1055.cfm" class="uri">https://store.drf.com/stores/1/Text_Charts_-_Annual_P19766C1055.cfm</a><a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p>American Pharoah was the first Triple Crown winner in almost 40 years. It was a very big deal for the horse racing. <a href="https://en.wikipedia.org/wiki/American_Pharoah" class="uri">https://en.wikipedia.org/wiki/American_Pharoah</a><a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p>This dataset has been filtered a bit to include only thoroughbred horse races and a set of the most common type of races. This dataset isn’t perfect as it’s truncated by the calendar year and horses run year round and often for more than one year. So there’s some limitations/caveats with this data, BUT it’s still pretty fun.<a href="#fnref3">↩</a></p></li>
+</ol>
+</div>

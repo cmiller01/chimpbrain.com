@@ -1,0 +1,186 @@
+---
+title: Shipping Horses
+author: Christian
+date: '2017-05-26'
+slug: shipping-horses
+categories: []
+tags:
+  - R
+  - Horse Racing
+---
+
+# Shipping Horses...or where is Zol Zayne going?
+_See code [here](https://github.com/cmiller01/chimpbrain.com/blob/master/content/post/2017-05-26-shipping-horses.Rmd)_
+
+## Background
+
+Horses get shipped from around the country and globe to compete for money and prestige (big races --> big breeding money...more on that some other time).
+
+Not all horses get "shipped", some horses stay at their home tracks while others might only race once at a given track then travel a few thousand miles to their home base for training then travel again for their next race.
+
+I wanted to examine some of this shipping behavior and especially to understand if there are patterns to how horses ship around the US.
+
+A while ago I purchased some data from the Daily Racing Form on results from horse races in 2015.[^1] It's a super-fun dataset which I plan on referencing often, for now I'm only going to look at a small piece, the "shipping" AKA where does American Pharoah go next?[^2]
+
+### Quick data description
+
+```{r load_up, message=FALSE, warning=FALSE, echo=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning=FALSE, echo=FALSE)
+# my favorites from the tidyverse
+library(readr) # reading csv
+library(dplyr) # manipulating data
+library(ggplot2) # plotting
+library(tidyr) # reshaping data...trying instead of reshape2
+
+library(knitr) # nicer table output using kable
+
+# for making the maps
+library(maps) 
+library(geosphere)
+library(mapproj)
+library(ggalt)
+
+# some nice colors
+gray <- '#d9d9d9'
+dark_gray <- '#636363'
+white <- '#ffffff'
+green <- '#74c476'
+light_green <- '#edf8e9'
+dark_green <- '#006d2c'
+
+
+df <- read_rds('~/df.rds') # simplified results file
+df <- select(df,race_date,race_track,race_type,surface,horse_name,original_finish)
+
+glimpse(df)
+```
+Each observation equates to a horse who started in a race in 2015. In this dataset there are over 300,000 starts represented. [^Caveats]
+
+
+* `race_date` = date of race, there's 338 records here, 93% of days in 2015 had a race!
+* `race_track` = unique code for race track, over 120 in this dataset
+* `race_type` = different "levels" for horses to race, from Claim (CLM/MCL) to Stakes (STK) like the Kentucky Derby
+* `surface` = What surface the race was run on, D = dirt, T = turf aka grass
+* `horse_name` = The name of the horse! Over 50K present here
+* `original_finish` = Order the horse finished in, 0 = did not finish, 1 = WON!
+
+## Who shipped to the most tracks?
+
+```{r}
+df %>% arrange(horse_name,race_date) %>% 
+  group_by(horse_name) %>% 
+  summarize(cnt=n_distinct(race_track)) %>% 
+  arrange(desc(cnt)) %>% head(4) -> top_shippers
+
+top_shippers %>%
+  kable(.,col.names = c('Horse name','Number of Different Tracks')) 
+```
+
+Zol Zayne shipped to 11 different tracks in less than a year. For comparison American Pharoah was at 7 different tracks throughout the year. Both of them are way above normal compared to other horses, with the median for the year being just 2 different tracks.
+ 
+### Horses on the move
+
+Let's look at some of the horses who "shipped" the most throughout 2015...
+
+```{r track_maps}
+tracks <- read_csv('https://raw.githubusercontent.com/cmiller01/horse-racing-data/913e04bf5cc34ca5e4c48c4cb4560a46faf8d360/track_directory/track_directory.csv')
+
+zz <- filter(df,horse_name %in% top_shippers$horse_name)
+
+zz <- inner_join(zz,tracks,by=c('race_track'='abbreviation'))
+
+zz %>% group_by(horse_name) %>% mutate(prior_lat=lag(latitude),prior_long=lag(longitude)) -> zz
+
+make_points <- function(lat,long,prior_lat,prior_long,n) {
+  # check for missing values
+  if(is.na(lat)||is.na(long)||is.na(prior_lat)||is.na(prior_long)) {
+    return(data.frame(long=NA,lat=NA))
+  }
+  # check if location is the same
+  if(lat==prior_lat && long==prior_long) {
+    l <- data.frame(long=long,lat=lat)
+  } else {
+    l <- gcIntermediate(c(long,lat),c(prior_long,prior_lat), 
+                        n=n, addStartEnd = TRUE)  
+  }
+  data.frame(long=l[,1],lat=l[,2])
+}
+
+pts <- zz %>% group_by(race_date,race_track,locale,horse_name) %>%
+  do(make_points(.$latitude,.$longitude,.$prior_lat,.$prior_long,50)) %>%
+  filter(!is.na(lat))
+
+states <- map_data('state') 
+
+ggplot() +
+  geom_cartogram(aes(x=long,y=lat,map_id=region),
+                 fill=white,colour=gray,map=states,data=states,size=0.2)+
+  geom_path(aes(x=long,y=lat,colour=horse_name,linetype=horse_name),data=pts)+
+  coord_map()+
+  theme_classic()+
+  ggtitle('Travels of the most shipped horses')+
+  theme(axis.title = element_blank(),axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())+labs(caption='SOURCES: Daily Racing Form, github.com/cmiller01/horse-racing-data')
+```
+
+Interesting! Although these horses shipped a lot of times they mostly stayed in the same region...I wonder what this would look like for all tracks?
+
+```{r all_track_map}
+zz <- inner_join(df,tracks,by=c('race_track'='abbreviation'))
+
+zz %>% group_by(horse_name) %>% 
+  mutate(prior_track=lag(race_track)) %>%
+  select(horse_name,race_track,prior_track) %>% 
+  filter(!is.na(prior_track)) %>% 
+  group_by(race_track,prior_track) %>% 
+  summarize(cnt=n()) -> zz
+
+# just draw the top "connections"
+zz %>% ungroup() %>% filter(!race_track==prior_track) %>% top_n(.,25,cnt) -> zz
+
+zz <- inner_join(zz,tracks[,c('latitude','longitude','abbreviation')],
+                 by=c('race_track'='abbreviation'))
+zz <- inner_join(zz,tracks[,c('latitude','longitude','abbreviation')],
+                 by=c('prior_track'='abbreviation'))
+
+zz %>% group_by(race_track,prior_track,cnt) %>%
+  do(make_points(.$latitude.x,.$longitude.x,.$latitude.y,.$longitude.y,50)) %>%
+  filter(!is.na(lat)) %>% mutate(connection=paste0(race_track,'-',prior_track)) -> pts
+
+## note you need to drop the coord_map() function to get geom_curve() to work
+ggplot() +
+  geom_cartogram(aes(x=long,y=lat,map_id=region),
+                 fill=white,colour=gray,map=states,data=states,size=0.2)+
+  geom_curve(aes(x=longitude.x,y=latitude.x,xend=longitude.y,yend=latitude.y), data=zz,colour=dark_green,size=1,lineend = "round",arrow = arrow(length =unit(0.01,"npc")))+
+  theme_classic()+
+  ggtitle('Connections between Tracks',
+          subtitle = 'Top 25 Connections Between Tracks')+
+  theme(axis.title = element_blank(),axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())+labs(caption='SOURCES: Daily Racing Form, github.com/cmiller01/horse-racing-data')
+
+
+```
+Seems like distance/region is a strong part of the equation in determining where horses ship. Also, this view really doesn't seem right. This map is interesting but a network diagram might be a better fit. I'll leave that for next time...
+
+## Thanks!
+
+Always helpful to have some examples, these were all useful to me:
+
+* https://flowingdata.com/2011/05/11/how-to-map-connections-with-great-circles/ 
+* https://gis.stackexchange.com/questions/122494/how-to-prevent-cross-world-lines-in-ggplot-world-map
+* http://zevross.com/blog/2014/07/16/mapping-in-r-using-the-ggplot2-package/
+
+##TODO: 
+Show network maps using adjacency matrix: see e.g.:
+  * http://kateto.net/networks-r-igraph
+  * http://www.mjdenny.com/Preparing_Network_Data_In_R.html
+
+[^Caveats]: This dataset has been filtered a bit to include only thoroughbred horse races and a set of the most common type of races. This dataset isn't perfect as it's truncated by the calendar year and horses run year round and often for more than one year. So there's some limitations/caveats with this data, BUT it's still pretty fun.
+
+[^1]: Example charts and field descriptors here: https://store.drf.com/stores/1/Text_Charts_-_Annual_P19766C1055.cfm
+
+[^2]: American Pharoah was the first Triple Crown winner in almost 40 years. It was a very big deal for the horse racing. https://en.wikipedia.org/wiki/American_Pharoah
+
+[^3]: Zol Zayne's entire racing history http://www.equibase.com/profiles/Results.cfm?type=Horse&refno=8853351&registry=T
