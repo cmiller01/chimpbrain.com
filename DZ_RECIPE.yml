@@ -1,0 +1,16 @@
+# suggester tool version: 0.0.1+c56de9f4-dirty
+
+dev:
+  name: ""
+  repos:
+  - https://github.com/cmiller01/chimpbrain.com
+compute:
+  compute_name: default
+  os_family: UBUNTU_22_04
+  region: us-west-1
+  resources:
+    cpus: 4+
+    disk: 50
+network:
+  category: container
+  network_name: default
